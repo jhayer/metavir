@@ -46,12 +46,25 @@ def retrieve_seq(fastq_file, tax_dic, out_file):
                 SeqIO.write(fasta_dic[taxid], out, "fastq")
 
 
+def taxa_id_listing(taxid_list):
+    if taxid_list.endswith(".ids"):
+        tax_dic={}
+        file_r = open(taxid_list, "r")
+        for line in file_r:
+            if line != "":
+                for taxid in line.split(','):
+                    if taxid != "":
+                        tax_dic.update( {taxid: []})
+    else:tax_dic = {taxid: [] for taxid in taxid_list.split(',')}
+    return (tax_dic)
+
+
 def main():
 
     parser = argparse.ArgumentParser(description="")
 
     parser.add_argument("-k", "--kaiju_file", help="Kaiju output file (.out)")
-    parser.add_argument("-t", "--tax_id_list", help="list of tax_id to retrieve coma-delimited")
+    parser.add_argument("-t", "--tax_id_list", help="list of tax_id to retrieve coma-delimited or a .ids file of taxids coma-delimited")
     parser.add_argument("-f", "--fastq_file", help="Fastq or fastq file to retrieve sequences from")
     parser.add_argument("-o", "--out_file", help="Output fasta file to create")
 
@@ -62,7 +75,7 @@ def main():
     fastq_file = args.fastq_file
     out_file = args.out_file
 
-    tax_dic = {taxid: [] for taxid in taxid_list.split(',')}
+    tax_dic = taxa_id_listing(taxid_list)
     parse_kaiju(kaiju_file, tax_dic)
     retrieve_seq(fastq_file, tax_dic, out_file)
 
