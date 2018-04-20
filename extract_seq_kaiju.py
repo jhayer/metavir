@@ -44,6 +44,7 @@ def checker(branch_name, krona_file, fastq, out_file_name, kaiju_file):
         if not kaiju_file.endswith('.out'):
                 print('Error no Kaiju file submit')
                 exit()
+        print('checking done')
         return()
 
 
@@ -64,27 +65,20 @@ def extract_names(branch_name, krona_file, name_file):
                                         taxa_names.append(tax)
 
         taxa_names = sorted(set(taxa_names))
+        print('extracting names done')
         file_r.close()
-
-        # output the list of names extracted
-        if name_file:
-                file_w=open(name_file,"a")
-                for tax_n in taxa_names:
-                        file_w.write("%s\n"%tax_n)
-                file_w.close()
 
         return (taxa_names)
 
 
 
-def extract_id (taxa_names, ids_file, taxid_list):
-
+def extract_id (whole_taxa_names, ids_file, taxid_list):
         raw_taxa = []
         taxa = []
         Entrez.email = 'EMAIL_ADRESS'
 
         # search for the name in the taxonomy bank and extract the hit
-        for name in taxa_names:
+        for name in whole_taxa_names:
                 id_handle = Entrez.esearch(db="Taxonomy",term=name,idtype="taxid")
                 id_rec = Entrez.read(id_handle)
                 raw_taxa.append(id_rec['IdList'])
@@ -92,22 +86,34 @@ def extract_id (taxa_names, ids_file, taxid_list):
         # clean the extract id
         taxa = [s.strip("[']") for stri in raw_taxa for s in stri]
 
-        # output the list of extracted ids
-        if ids_file:
-                file_w=open(ids_file,"a")
-                for tax_id in taxa:
-                        file_w.write("%s,"%tax_id)
-                file_w.close()
 
         taxid_list.extend(taxa)
-
+        print('extracting id done')
         return (taxid_list)
 
+
+
+def output_name_ids(whole_taxa_name, taxid_list, name_file, ids_file):
+        # output the list of names extracted
+        if name_file:
+                file_w=open(name_file,"w")
+                for tax_n in whole_taxa_name:
+                        file_w.write("%s\n"%tax_n)
+                file_w.close()
+
+        # output the list of extracted ids
+        if ids_file:
+                file_w=open(ids_file,"w")
+                for tax_id in taxid_list:
+                        file_w.write("%s,"%tax_id)
+                file_w.close()
+        print('output id and name done')
 
 
 def taxa_id_listing(taxid_list):
 
         tax_dic = {taxid: [] for taxid in taxid_list}
+        print('id dic done')
         return (tax_dic)
 
 
@@ -130,7 +136,7 @@ def parse_kaiju(kaiju_file, tax_dic):
                         line_tab = line.split('\t')
                         if line_tab[2].rstrip() in tax_dic:
                                 tax_dic[line_tab[2].rstrip()].append(line_tab[1])
-
+        print('kaiju parsed')
 
 def retrieve_seq(fastq_file, tax_dic, out_file):
         # fasta_save = open(out_file, 'w')
@@ -141,6 +147,7 @@ def retrieve_seq(fastq_file, tax_dic, out_file):
         # if the user wants to input a fasta file
         if fastq_file.endswith(".fasta"):
                 in_file_format = "fasta"
+        print('seq format retrieved')
 
         for record in SeqIO.parse(fastq_handle, in_file_format):
 
@@ -151,8 +158,8 @@ def retrieve_seq(fastq_file, tax_dic, out_file):
                         #    new_rec = SeqRecord.SeqRecord(record.seq, id=header, description="")
                                 new_rec.id = header
                                 fasta_dic[tax].append(new_rec)
-
-        if  out_file.endswith(".fasta") or out_file.endswith(".fa") :
+                print('tax dic done')
+        if  out_file.endswith(".fasta"):
         # writing the fasta file (without erasing previous seqs)
                 with open(out_file, 'a') as out:
                         for taxid in fasta_dic.keys():
@@ -188,11 +195,15 @@ def main():
         name_file = args.name_file
 
         taxid_list = []
+        whole_taxa_names = []
 
         for branch_name in branches.split(','):
                 checker(branch_name, krona_file, fastq, out_file_name, kaiju_file)
                 taxa_names = extract_names(branch_name, krona_file, name_file)
-        taxid_list = extract_id(taxa_names, ids_file, taxid_list)
+                whole_taxa_names.extend(taxa_names)
+        whole_taxa_names = sorted(set(whole_taxa_names))        
+        taxid_list = extract_id(whole_taxa_names, ids_file, taxid_list)
+        output_name_ids(whole_taxa_names, taxid_list, name_file, ids_file)
 
         tax_dic = taxa_id_listing(taxid_list)
         count = 0
@@ -205,13 +216,4 @@ def main():
 if __name__ == '__main__':
         main()
 
-        tax_dic = taxa_id_listing(taxid_list)
-        count = 0
-        for fastq_file in fastq.split(','):
-                count += 1
-                out_file = outfile_test(out_file_name,count)
-                parse_kaiju(kaiju_file, tax_dic)
-                retrieve_seq(fastq_file, tax_dic, out_file)
-
-if __name__ == '__main__':
-        main()
+        
