@@ -31,11 +31,12 @@ def checker(branch_name, krona_file, fastq, out_file_name, kaiju_file):
                         exit ()
 
         # check if the outfile format is the one expected
-        if  out_file_name.endswith('.fasta') or out_file_name.endswith('.fastq'):
-                useless=42
-        else:
-                print ("error invalid out_file name, must end with fastq or fasta")
-                exit()
+        if out_file_name:
+                if  out_file_name.endswith('.fasta') or out_file_name.endswith('.fastq'):
+                        useless=42
+                else:
+                        print ("error invalid out_file name, must end with fastq or fasta")
+                        exit()
 
         if not kaiju_file:
                 print ('Give the -k argument with a kaiju file (.out)')
@@ -107,24 +108,29 @@ def output_name_ids(whole_taxa_name, taxid_list, name_file, ids_file):
                 for tax_id in taxid_list:
                         file_w.write("%s,"%tax_id)
                 file_w.close()
-        print('output id and name done')
+        print('outputing id and name file done')
 
 
 def taxa_id_listing(taxid_list):
 
         tax_dic = {taxid: [] for taxid in taxid_list}
-        print('id dic done')
         return (tax_dic)
 
 
 
-def outfile_test(out_file_name,count):
-
+def outfile_test(out_file_name,count,fastq_file):
+        if not out_file_name:
+                # use the name of the fastqfile used
+                out_file= fastq_file.split(".fastq")[0]+'_extracted.fastq'
+                return(out_file)
+        
         if out_file_name.endswith('.fasta'):
-                out_file= out_file_name.strip(".fasta")+'_File%d.fasta'%count
+                #keep the generic name of the fastq file and add a value for each submitted file
+                out_file= out_file_name.split(".fasta")[0]+'_File%d.fasta'%count
                 return (out_file)
+        
         elif out_file_name.endswith('.fastq'):
-                out_file= out_file_name.strip(".fastq")+'_File%d.fastq'%count
+                out_file= out_file_name.split(".fastq")[0]+'_File%d.fastq'%count
                 return (out_file)
 
 
@@ -148,7 +154,9 @@ def retrieve_seq(fastq_file, tax_dic, out_file):
         if fastq_file.endswith(".fasta"):
                 in_file_format = "fasta"
         print('seq format retrieved')
-
+        
+        # parse the fastqfile and for each tax search if a read is present in the fastq
+        # then it add all the corresponding in a dic to be output
         for record in SeqIO.parse(fastq_handle, in_file_format):
 
                 for tax, reads in tax_dic.items():
@@ -158,7 +166,8 @@ def retrieve_seq(fastq_file, tax_dic, out_file):
                         #    new_rec = SeqRecord.SeqRecord(record.seq, id=header, description="")
                                 new_rec.id = header
                                 fasta_dic[tax].append(new_rec)
-                print('tax dic done')
+        fastq_handle.close()
+        
         if  out_file.endswith(".fasta"):
         # writing the fasta file (without erasing previous seqs)
                 with open(out_file, 'a') as out:
@@ -178,7 +187,7 @@ def main():
 
         parser.add_argument("-k", "--kaiju_file", help="Kaiju output file (.out)")
         parser.add_argument("-f", "--fastq_file", help="one or more file to retrieve sequences from")
-        parser.add_argument("-o", "--out_file", help="Output fasta file to create")
+        parser.add_argument("-o", "--out_file", help="Output fasta file to create, default: name of fastq submit with '_extracted'")
         parser.add_argument("-b", "--branch_name", help="One or more names (coma-delemited) of Branches in the .krona file ")
         parser.add_argument("-t", "--krona_file", help="Krona file to retrieve Taxid from")
         parser.add_argument("-i", "--ids_file", help="Output name for the list of ids; Default: None")
@@ -197,19 +206,22 @@ def main():
         taxid_list = []
         whole_taxa_names = []
 
+        # search the list of names for each specified branch
         for branch_name in branches.split(','):
                 checker(branch_name, krona_file, fastq, out_file_name, kaiju_file)
                 taxa_names = extract_names(branch_name, krona_file, name_file)
                 whole_taxa_names.extend(taxa_names)
+        
         whole_taxa_names = sorted(set(whole_taxa_names))        
         taxid_list = extract_id(whole_taxa_names, ids_file, taxid_list)
         output_name_ids(whole_taxa_names, taxid_list, name_file, ids_file)
 
         tax_dic = taxa_id_listing(taxid_list)
         count = 0
+        # extract the reads in each specified file
         for fastq_file in fastq.split(','):
                 count += 1
-                out_file = outfile_test(out_file_name,count)
+                out_file = outfile_test(out_file_name,count,fastq_file)
                 parse_kaiju(kaiju_file, tax_dic)
                 retrieve_seq(fastq_file, tax_dic, out_file)
 
