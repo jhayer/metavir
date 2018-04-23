@@ -6,15 +6,18 @@ import re
 from Bio import Entrez, SeqIO, SeqRecord
 
 
-def checker(branch_name, krona_file, fastq, out_file_name, kaiju_file):
-
-        if not branch_name:
-                print ("Give the -b argument")
+def checker(branches, krona_file, fastq, out_file_name, kaiju_file):
+        if not branches:
+                print('please give at least one taxaname to start the search') 
                 exit()
+        for branch_name in branches.split(','):
+                if not branch_name:
+                        print ("Give the -b argument")
+                        exit()
 
-        if len(branch_name) >100:
-                print ("Error Invalid branch name")
-                exit()
+                if len(branch_name) >100:
+                        print ("Error Invalid branch name")
+                        exit()
 
         if not krona_file:
                 print ("Give the -f argument")
@@ -182,16 +185,17 @@ def retrieve_seq(fastq_file, tax_dic, out_file):
 
 
 def main():
+        
+        desc="Extract sequences from fastq or fasta files that match one or more specified taxa names in Kaiju"
+        parser = argparse.ArgumentParser(description=desc)
 
-        parser = argparse.ArgumentParser(description="")
-
-        parser.add_argument("-k", "--kaiju_file", help="Kaiju output file (.out)")
-        parser.add_argument("-f", "--fastq_file", help="one or more file to retrieve sequences from")
-        parser.add_argument("-o", "--out_file", help="Output fasta file to create, default: name of fastq submit with '_extracted'")
-        parser.add_argument("-b", "--branch_name", help="One or more names (coma-delemited) of Branches in the .krona file ")
-        parser.add_argument("-t", "--krona_file", help="Krona file to retrieve Taxid from")
-        parser.add_argument("-i", "--ids_file", help="Output name for the list of ids; Default: None")
-        parser.add_argument("-n", "--name_file", help="Output name for the list of names; Default: None")
+        parser.add_argument("-k", "--kaiju_file", help="Kaiju output file (.out)", required=True)
+        parser.add_argument("-f", "--fastq_file", help="One or more fastq file to retrieve sequences from", required=True)
+        parser.add_argument("-o", "--out_file", help="Output fasta/fastq file to create, default: name of fastq submit with '_extracted'")
+        parser.add_argument("-b", "--branch_name", help="One or more names (coma-delemited) of the highest taxanames to retrieve in the .krona file ", required=True)
+        parser.add_argument("-t", "--krona_file", help="Krona file to retrieve Taxid from (.krona)", required=True)
+        parser.add_argument("-i", "--ids_file", help="Output name for the list of Taxa_ids; Default: None")
+        parser.add_argument("-n", "--name_file", help="Output name for the list of Taxa_names; Default: None")
 
         args = parser.parse_args()
 
@@ -205,10 +209,10 @@ def main():
 
         taxid_list = []
         whole_taxa_names = []
-
+        
+        checker(branches, krona_file, fastq, out_file_name, kaiju_file)
         # search the list of names for each specified branch
         for branch_name in branches.split(','):
-                checker(branch_name, krona_file, fastq, out_file_name, kaiju_file)
                 taxa_names = extract_names(branch_name, krona_file, name_file)
                 whole_taxa_names.extend(taxa_names)
         
