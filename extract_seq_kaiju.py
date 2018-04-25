@@ -67,7 +67,8 @@ def extract_names(branch_name, krona_file, name_file):
                         for tax in taxa:
                                 if tax != "":
                                         taxa_names.append(tax)
-
+        
+        taxa_names.append(branch_name)
         taxa_names = sorted(set(taxa_names))
         print('extracting names done')
         file_r.close()
