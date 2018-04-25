@@ -214,6 +214,7 @@ def main():
         checker(branches, krona_file, fastq, out_file_name, kaiju_file)
         # search the list of names for each specified branch
         for branch_name in branches.split(','):
+                branch_name = branch_name.replace("+"," ")
                 taxa_names = extract_names(branch_name, krona_file, name_file)
                 whole_taxa_names.extend(taxa_names)
         
