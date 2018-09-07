@@ -8,7 +8,7 @@ from Bio import Entrez, SeqIO, SeqRecord
 
 def checker(branches, krona_file, fastq, out_file_name, kaiju_file):
         if not branches:
-                print('please give at least one taxaname to start the search') 
+                print('please give at least one taxaname to start the search')
                 exit()
         for branch_name in branches.split(','):
                 if not branch_name:
@@ -28,14 +28,22 @@ def checker(branches, krona_file, fastq, out_file_name, kaiju_file):
                 exit ()
 
         # for each submitted file, test if it's the expected format
-        for fastq_file in fastq.split(','):
-                if not fastq_file.endswith('.fastq'):
-                        print ("error invalid fastq file  name, must end with fastq")
+        for seq_file in fastq.split(','):
+                input_ext=".fastq"
+                if not seq_file.endswith('.fastq'):
+                    if seq_file.endswith('.fq'):
+                        input_ext=".fq"
+                    elif seq_file.endswith('.fa'):
+                        input_ext=".fa"
+                    elif seq_file.endswith('.fasta'):
+                        input_ext=".fasta"
+                    else:
+                        print ("error invalid fastq file  name, must end with fastq, fq, fasta or fa")
                         exit ()
 
         # check if the outfile format is the one expected
         if out_file_name:
-                if  out_file_name.endswith('.fasta') or out_file_name.endswith('.fastq'):
+                if  out_file_name.endswith('.fasta') or out_file_name.endswith('.fastq') or out_file_name.endswith('.fa') or out_file_name.endswith('.fq'):
                         useless=42
                 else:
                         print ("error invalid out_file name, must end with fastq or fasta")
@@ -49,7 +57,7 @@ def checker(branches, krona_file, fastq, out_file_name, kaiju_file):
                 print('Error no Kaiju file submit')
                 exit()
         print('checking done')
-        return()
+        return(input_ext)
 
 
 
@@ -67,7 +75,7 @@ def extract_names(branch_name, krona_file, name_file):
                         for tax in taxa:
                                 if tax != "":
                                         taxa_names.append(tax)
-        
+
         taxa_names.append(branch_name)
         taxa_names = sorted(set(taxa_names))
         print('extracting names done')
@@ -122,17 +130,17 @@ def taxa_id_listing(taxid_list):
 
 
 
-def outfile_test(out_file_name,count,fastq_file):
+def outfile_test(out_file_name,count,seq_file):
         if not out_file_name:
                 # use the name of the fastqfile used
-                out_file= fastq_file.split(".fastq")[0]+'_extracted.fastq'
+                out_file= seq_file.split(input_ext)[0]+'_extracted.fastq'
                 return(out_file)
-        
+
         if out_file_name.endswith('.fasta'):
                 #keep the generic name of the fastq file and add a value for each submitted file
                 out_file= out_file_name.split(".fasta")[0]+'_File%d.fasta'%count
                 return (out_file)
-        
+
         elif out_file_name.endswith('.fastq'):
                 out_file= out_file_name.split(".fastq")[0]+'_File%d.fastq'%count
                 return (out_file)
@@ -148,17 +156,18 @@ def parse_kaiju(kaiju_file, tax_dic):
                                 tax_dic[line_tab[2].rstrip()].append(line_tab[1])
         print('kaiju parsed')
 
-def retrieve_seq(fastq_file, tax_dic, out_file):
+def retrieve_seq(seq_file, tax_dic, out_file, input_ext):
         # fasta_save = open(out_file, 'w')
         fasta_dic = {taxid: [] for taxid in tax_dic.keys()}
 
-        fastq_handle = open(fastq_file, 'r')
-        in_file_format = "fastq"
-        # if the user wants to input a fasta file
-        if fastq_file.endswith(".fasta"):
-                in_file_format = "fasta"
+        #check if input is fastq or fasta
+        fastq_handle = open(seq_file, 'r')
+        if input_ext == "fastq" or input_ext == "fq":
+            in_file_format = "fastq"
+        else:
+            in_file_format = "fasta"
         print('seq format retrieved')
-        
+
         # parse the fastqfile and for each tax search if a read is present in the fastq
         # then it add all the corresponding in a dic to be output
         for record in SeqIO.parse(fastq_handle, in_file_format):
@@ -171,8 +180,8 @@ def retrieve_seq(fastq_file, tax_dic, out_file):
                                 new_rec.id = header
                                 fasta_dic[tax].append(new_rec)
         fastq_handle.close()
-        
-        if  out_file.endswith(".fasta"):
+
+        if  out_file.endswith(".fasta") or out_file.endswith(".fa"):
         # writing the fasta file (without erasing previous seqs)
                 with open(out_file, 'a') as out:
                         for taxid in fasta_dic.keys():
@@ -186,12 +195,12 @@ def retrieve_seq(fastq_file, tax_dic, out_file):
 
 
 def main():
-        
+
         desc="Extract sequences from fastq or fasta files that match one or more specified taxa names in Kaiju"
         parser = argparse.ArgumentParser(description=desc)
 
         parser.add_argument("-k", "--kaiju_file", help="Kaiju output file (.out)", required=True)
-        parser.add_argument("-f", "--fastq_file", help="One or more fastq file to retrieve sequences from", required=True)
+        parser.add_argument("-f", "--seq_file", help="One or more fastq or fasta file to retrieve sequences from", required=True)
         parser.add_argument("-o", "--out_file", help="Output fasta/fastq file to create, default: name of fastq submit with '_extracted'")
         parser.add_argument("-b", "--branch_name", help="One or more names (coma-delemited) of the highest taxanames to retrieve in the .krona file ", required=True)
         parser.add_argument("-t", "--krona_file", help="Krona file to retrieve Taxid from (.krona)", required=True)
@@ -203,22 +212,23 @@ def main():
         branches = args.branch_name
         krona_file = args.krona_file
         kaiju_file = args.kaiju_file
-        fastq = args.fastq_file
+        fastq = args.seq_file
         out_file_name = args.out_file
         ids_file = args.ids_file
         name_file = args.name_file
 
         taxid_list = []
         whole_taxa_names = []
-        
-        checker(branches, krona_file, fastq, out_file_name, kaiju_file)
+
+
+        input_ext=checker(branches, krona_file, fastq, out_file_name, kaiju_file)
         # search the list of names for each specified branch
         for branch_name in branches.split(','):
                 branch_name = branch_name.replace("+"," ")
                 taxa_names = extract_names(branch_name, krona_file, name_file)
                 whole_taxa_names.extend(taxa_names)
-        
-        whole_taxa_names = sorted(set(whole_taxa_names))        
+
+        whole_taxa_names = sorted(set(whole_taxa_names))
         taxid_list = extract_id(whole_taxa_names, ids_file, taxid_list)
         output_name_ids(whole_taxa_names, taxid_list, name_file, ids_file)
 
@@ -229,9 +239,7 @@ def main():
                 count += 1
                 out_file = outfile_test(out_file_name,count,fastq_file)
                 parse_kaiju(kaiju_file, tax_dic)
-                retrieve_seq(fastq_file, tax_dic, out_file)
+                retrieve_seq(fastq_file, tax_dic, out_file,input_ext)
 
 if __name__ == '__main__':
         main()
-
-        
