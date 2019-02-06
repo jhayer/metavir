@@ -13,13 +13,13 @@ def main():
         using a prefix provided by the user")
 
     parser.add_argument("-i", "--input_file",
-                        help="contigs fasta file from assembly")
+                        help="contigs fasta file from assembly", required=True)
     parser.add_argument("-o", "--output_file",
-                        help="fasta file with renamed headers")
+                        help="fasta file with renamed headers", required=True)
     parser.add_argument("-a", "--assembler", default="megahit",
                         help="Assembler used. Options: megahit")
     parser.add_argument("-p", "--prefix",
-                        help="Prefix to be added to the contigs headers")
+                        help="Prefix to be added to the contigs headers", required=True)
 
     args = parser.parse_args()
 
@@ -56,9 +56,10 @@ def megahit_rename(new_rec, prefix):
     # new_rec = record
     header = new_rec.description
     if " " in header:
-        header = header.replace(" ", "_")
-    new_header = prefix+'_'+header
-
+        head_list = header.split(" ")
+        # header = header.replace(" ", "_")
+    # new_header = prefix+'_'+header
+    new_header = prefix+'_'+head_list[0]+'_'+head_list[3]
     new_rec.id = new_header
     new_rec.description = ""
     return(new_rec)
