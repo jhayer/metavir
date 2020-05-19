@@ -137,8 +137,13 @@ def outfile_test(out_file_name,count,seq_file):
                 return(out_file)
 
         if out_file_name.endswith('.fasta'):
-                #keep the generic name of the fastq file and add a value for each submitted file
+                #keep the generic name of the fasta file and add a value for each submitted file
                 out_file= out_file_name.split(".fasta")[0]+'_File%d.fasta'%count
+                return (out_file)
+
+        if out_file_name.endswith('.fa'):
+                #keep the generic name of the fa file and add a value for each submitted file
+                out_file= out_file_name.split(".fa")[0]+'_File%d.fa'%count
                 return (out_file)
 
         elif out_file_name.endswith('.fastq'):
