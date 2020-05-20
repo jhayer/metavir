@@ -165,9 +165,9 @@ def retrieve_seq(seq_file, tax_dic, out_file, input_ext):
         # fasta_save = open(out_file, 'w')
         fasta_dic = {taxid: [] for taxid in tax_dic.keys()}
 
-        #check if input is fastq or fasta
+        # check if input is fastq or fasta
         fastq_handle = open(seq_file, 'r')
-        if input_ext == "fastq" or input_ext == "fq":
+        if input_ext == ".fastq" or input_ext == ".fq":
             in_file_format = "fastq"
         else:
             in_file_format = "fasta"
@@ -176,7 +176,6 @@ def retrieve_seq(seq_file, tax_dic, out_file, input_ext):
         # parse the fastqfile and for each tax search if a read is present in the fastq
         # then it add all the corresponding in a dic to be output
         for record in SeqIO.parse(fastq_handle, in_file_format):
-
                 for tax, reads in tax_dic.items():
                         if record.id in reads:
                                 new_rec = record
@@ -239,11 +238,12 @@ def main():
 
         tax_dic = taxa_id_listing(taxid_list)
         count = 0
+        # same kaiju file used for all fastq files
+        parse_kaiju(kaiju_file, tax_dic)
         # extract the reads in each specified file
         for fastq_file in fastq.split(','):
                 count += 1
                 out_file = outfile_test(out_file_name,count,fastq_file)
-                parse_kaiju(kaiju_file, tax_dic)
                 retrieve_seq(fastq_file, tax_dic, out_file,input_ext)
 
 if __name__ == '__main__':
