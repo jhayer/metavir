@@ -28,7 +28,7 @@ def main():
     assembler = args.assembler
     prefix = args.prefix
 
-    if args.assembler == "megahit":
+    if args.assembler == "megahit" or args.assembler == "spades":
         rename_headers(in_file, out_file, assembler, prefix)
     else:
         raise Exception("Unknown assembler: '%s'" % args.assembler)
@@ -44,7 +44,10 @@ def rename_headers(in_file, out_file, ass, prefix):
         if ass == "megahit":
             new_rec = megahit_rename(new_rec, prefix)
         else:
-            print("Doing nothing, function not implemented yet for this assembler")
+            if ass == "spades":
+                new_rec = spades_rename(new_rec, prefix)
+            else:
+                print("Doing nothing, function not implemented yet for this assembler")
 
         SeqIO.write(new_rec, save_handle, "fasta")
 
@@ -64,6 +67,13 @@ def megahit_rename(new_rec, prefix):
     new_rec.description = ""
     return(new_rec)
 
+def spades_rename(new_rec, prefix):
+    header = new_rec.description
+
+    new_header = prefix+'_'+header
+    new_rec.id = new_header
+    new_rec.description = ""
+    return(new_rec)
 
 if __name__ == '__main__':
     main()
